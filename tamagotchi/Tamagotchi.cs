@@ -1,35 +1,59 @@
 using System;
-using System.Runtime.Intrinsics.Arm;
+using System.Collections.Generic;
 using System.Timers;
+using System.Threading.Tasks;
 
 public class Tamagotchi
 {
     private List<string> words = new List<string>();
+    private Action[] methods;
 
-    Action[] methods;
-
-    int second = 0;
+    public int second = 0;
     private int hunger;
     private int boredom;
     private bool isAlive;
     private Random randomGenerator = new Random();
-
     public string Name;
-
-    private int maxHungerOrBoredom = 10;
-
-
-
-    System.Timers.Timer timer = new(interval: 1000);
+    
+    private int maxHungerOrBoredom = 9;
+    private System.Timers.Timer timer;
+    private TaskCompletionSource<bool> tickCompletionSource;
 
     public Tamagotchi()
     {
+        isAlive = true;
         hunger = 0;
         boredom = 0;
-        isAlive = GetAlive();
-        methods = new Action[] { Hi, Feed, PrintStats, Tick, ReduceBoredom };
+        methods = new Action[] { Hi, Feed, PrintStats, ReduceBoredom };
+        ConfigureTimer();
     }
 
+    private void ConfigureTimer()
+    {
+        timer = new System.Timers.Timer(interval: 1000); // Set the timer interval to 1 second (1000 milliseconds) for faster updates
+        timer.Elapsed += (sender, e) => OnTimerElapsed();
+        tickCompletionSource = new TaskCompletionSource<bool>(); // Create a new task completion source for each tick
+    }
+
+    public void StartTimer()
+    {
+        timer.Start();
+    }  
+    public void StopTimer(){
+        timer.Stop();
+    }
+
+    public async Task Tick()
+    {
+        await tickCompletionSource.Task;
+        tickCompletionSource = new TaskCompletionSource<bool>(); // Create a new task completion source for the next tick
+    }
+
+    private void OnTimerElapsed()
+    {
+        IncreaseStats();
+        tickCompletionSource.SetResult(true);
+    }
 
     public void Hi()
     {
@@ -39,10 +63,13 @@ public class Tamagotchi
 
     public void Teach(string word) { }
 
-    public void Tick()
+    private void IncreaseStats()
     {
-        timer.Elapsed += (sender, e) => IncreaseStats();
-        System.Console.WriteLine(second);
+        hunger += 1;
+        boredom += 1;
+        second++;
+
+        System.Console.WriteLine("BLABLA kacll");
     }
 
     public void PrintStats()
@@ -56,8 +83,8 @@ public class Tamagotchi
             System.Console.WriteLine($"{Name} är död..");
         }
 
-        System.Console.WriteLine(Name + "s hunger: ", hunger);
-        System.Console.WriteLine(Name + "s Boredom: ", boredom);
+        System.Console.WriteLine($"{Name}s hunger: {hunger}");
+        System.Console.WriteLine($"{Name}s Boredom: {boredom}");
     }
 
     public bool GetAlive()
@@ -78,14 +105,4 @@ public class Tamagotchi
     {
         hunger -= 1;
     }
-
-
-    //Metod för vad som händer varje tick
-    private void IncreaseStats()
-    {
-        hunger += 1;
-        boredom += 1;
-        second++;
-    }
-
 }
